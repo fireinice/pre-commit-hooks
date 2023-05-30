@@ -30,3 +30,23 @@ def zsplit(s: str) -> list[str]:
         return s.split('\0')
     else:
         return []
+
+
+def filter_lfs_files(filenames: set[str]) -> None:  # pragma: no cover (lfs)
+    """Remove files tracked by git-lfs from the set."""
+    if not filenames:
+        return
+
+    check_attr = subprocess.run(
+        ('git', 'check-attr', 'filter', '-z', '--stdin'),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        encoding='utf-8',
+        check=True,
+        input='\0'.join(filenames),
+    )
+    stdout = zsplit(check_attr.stdout)
+    for i in range(0, len(stdout), 3):
+        filename, filter_tag = stdout[i], stdout[i + 2]
+        if filter_tag == 'lfs':
+            filenames.remove(filename)
